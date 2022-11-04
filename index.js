@@ -1,4 +1,4 @@
-import { ApolloServer, gql } from "apollo-server";
+import { ApolloServer, gql, UserInputError } from "apollo-server";
 
 const people = [
     {
@@ -11,7 +11,7 @@ const people = [
     {
         name: "Person 2",
         phone: "5511111111",
-        // street: "street fighter 2",
+        street: "street fighter 2",
         city: "Mexico",
         id: 2,
     },
@@ -25,6 +25,10 @@ const people = [
 ];
 
 const typeDefinitions = gql`
+    enum YesNo{
+        YES
+        NO
+    }
     type Address {
         street:String!
         city:String!
@@ -38,19 +42,65 @@ const typeDefinitions = gql`
 
     type Query {
         personCount: Int!
-        allPeople: [Person]!
+        allPeople(phone: YesNo): [Person]!
         findPerson(name: String!): Person
+    }
+
+    type Mutation {
+        addPerson(
+            name: String!
+            phone: String
+            street: String!
+            city: String!
+        ) : Person
+        editPhoneNumber(
+            name: String!
+            phone: String!
+        ): Person
     }
 `;
 
 const resolvers = {
     Query: {
         personCount: () => people.length,
-        allPeople: () => people,
+        allPeople: (root, args) => {
+            if(!args.phone) return people
+
+            // return people.filter(person=>{
+            //     args.phone==="YES" ? person.phone : !person.phone
+            // })
+
+            const byPhone = person =>
+            args.phone === "YES" ? person.phone : !person.phone
+
+            return people.filter(byPhone)
+        },
         findPerson: (root, args) => {
         const { name } = args;
         return people.find((person) => person.name === name);
         },
+    },
+    Mutation : {
+        addPerson: (root, args) => {
+            if(people.find(person => person.name === args.name)){
+                throw new UserInputError("Name cannot be duplicated.", {
+                    invalidArgs: args.name
+                })
+            }
+            const person = { ...args, id : people.length + 1 }
+            people.push(person)
+            return person
+        },
+        editPhoneNumber: (root, args) => {
+            const personIndex = people.findIndex(p => p.name === args.name)
+            if(personIndex === -1) return null
+
+            const personToUpdate = people[personIndex]
+
+            const updatedPerson = { ...personToUpdate, phone: args.phone }
+            people[personIndex] = updatedPerson
+            return updatedPerson
+        }
     },
     Person: {
         address: (root) => {
