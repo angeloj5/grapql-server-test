@@ -3,7 +3,7 @@ This is a test for GraphQL
 
 ## GraphQL commands to use the queries and mutation for this example
 You can use these commands to fetch, insert and edit data for this example using GraphQL
-```json
+```graphql
 mutation {
   addPerson(name: "Person 4", street: "Dragon Ball Z", city: "Mexico City") {
     name
